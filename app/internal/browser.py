@@ -94,16 +94,19 @@ async def page_processing(
     params: CommonQueryParams,
     browser_params: BrowserQueryParams,
     init_scripts: Sequence[str] = None,
-):
+) -> int:
     # add stealth scripts for bypassing anti-scraping mechanisms
-    if params.stealth:
-        await use_stealth_mode(page)
+    if params.stealth or params.stealth_scripts:
+        await use_stealth_mode(page, scripts_to_use=params.stealth_scripts)
 
     # add extra init scripts
     if init_scripts:
         for path in init_scripts:
             await page.add_init_script(path=path)
 
+    if params.user_pre_scripts:
+        for path in params.user_pre_scripts:
+            await page.add_init_script(path=USER_SCRIPTS_DIR / path)
     # block by resource types
     if browser_params.resource:
         handler = resource_blocker(whitelist=browser_params.resource)
@@ -111,7 +114,7 @@ async def page_processing(
 
     # navigate to the given url
     # noinspection PyTypeChecker
-    await page.goto(url, timeout=browser_params.timeout, wait_until=browser_params.wait_until)
+    response = await page.goto(url, timeout=browser_params.timeout, wait_until=browser_params.wait_until)
 
     # wait for the given timeout in milliseconds and scroll down the page
     n = 10
@@ -136,6 +139,8 @@ async def page_processing(
     if params.user_scripts_timeout:
         await page.wait_for_timeout(params.user_scripts_timeout)
 
+    return response.status
+
 
 def resource_blocker(whitelist: Sequence[str]):  # list of resource types to allow
     async def block(route: Route):
@@ -146,9 +151,13 @@ def resource_blocker(whitelist: Sequence[str]):  # list of resource types to all
     return block
 
 
-async def use_stealth_mode(page: Page):
-    for script in STEALTH_SCRIPTS_DIR.glob('*.js'):
-        await page.add_init_script(path=script)
+async def use_stealth_mode(page: Page, scripts_to_use: Sequence[str] = None):
+    if scripts_to_use:
+        for script in scripts_to_use:
+            await page.add_init_script(path=STEALTH_SCRIPTS_DIR / script)
+    else:
+        for script in STEALTH_SCRIPTS_DIR.glob('*.js'):
+            await page.add_init_script(path=script)
 
 
 async def get_screenshot(page: Page):

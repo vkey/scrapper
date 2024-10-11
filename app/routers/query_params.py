@@ -10,7 +10,7 @@ import validators
 from fastapi import Query
 
 from internal.errors import QueryParsingError
-from settings import USER_SCRIPTS_DIR, DEVICE_REGISTRY
+from settings import USER_SCRIPTS_DIR, DEVICE_REGISTRY, STEALTH_SCRIPTS_DIR
 
 
 class WaitUntilEnum(str, Enum):
@@ -70,6 +70,17 @@ class CommonQueryParams:
                 )
             ),
         ] = False,
+        stealth_scripts: Annotated[
+            str | None,
+            Query(
+                alias='stealth-scripts',
+                description=(
+                    'List of stealth scripts to be used on a webpage. Separate them with commas.<br>'
+                    '(e.g. `stealth1.js, stealth2.js`)<br>'
+                    'Check app/scripts/stealth directory for available scripts.<br><br>'
+                )
+            ),
+        ] = None,
         screenshot: Annotated[
             bool,
             Query(
@@ -96,6 +107,19 @@ class CommonQueryParams:
                 ),
             ),
         ] = None,
+        user_pre_scripts: Annotated[
+            str | None,
+            Query(
+                alias='user-pre-scripts',
+                description=(
+                    'To use your JavaScript scripts on a webpage, put your script files into the `user_scripts` directory. '
+                    'Then, list the scripts you need in the `user-pre-scripts` parameter, separating them with commas. '
+                    'For example, you might pass `remove-ads.js, click-cookie-accept-button.js`.<br><br>'
+                    'If you plan to run asynchronous long-running scripts, check `user-scripts-timeout` parameter.'
+                    'These scripts will run before the page loads.'
+                ),
+            ),
+        ] = None,
         user_scripts_timeout: Annotated[
             int,
             Query(
@@ -110,6 +134,8 @@ class CommonQueryParams:
         self.cache = cache
         self.full_content = full_content
         self.stealth = stealth
+        self.stealth_scripts = None
+        self.user_pre_scripts = None
         self.screenshot = screenshot
         self.user_scripts = None
         self.user_scripts_timeout = user_scripts_timeout
@@ -122,6 +148,23 @@ class CommonQueryParams:
                     if not (USER_SCRIPTS_DIR / script).exists():
                         raise QueryParsingError('user_scripts', 'User script not found', script)
                 self.user_scripts = user_scripts
+        if user_pre_scripts:
+            user_pre_scripts = list(filter(None, map(str.strip, user_pre_scripts.split(','))))
+            if user_pre_scripts:
+                # check if all files exist
+                for script in user_pre_scripts:
+                    if not (USER_SCRIPTS_DIR / script).exists():
+                        raise QueryParsingError('user_pre_scripts', 'User script not found', script)
+                self.user_pre_scripts = user_pre_scripts
+        if stealth_scripts:
+            stealth_scripts = list(filter(None, map(str.strip, stealth_scripts.split(',')))
+            )
+            if stealth_scripts:
+                # check if all files exist
+                for script in stealth_scripts:
+                    if not (STEALTH_SCRIPTS_DIR / script).exists():
+                        raise QueryParsingError('stealth_scripts', 'Stealth script not found', script)
+                self.stealth_scripts = stealth_scripts
 
 
 class BrowserQueryParams:

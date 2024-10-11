@@ -38,6 +38,7 @@ class AnyPage(BaseModel):
     fullContent: Annotated[str | None, Query(description='full HTML contents of the page')] = None
     screenshotUri: Annotated[str | None, Query(description='URL of the screenshot of the page')] = None
     title: Annotated[str | None, Query(description="page's title")] = None
+    status_code: Annotated[int, Query(description='HTTP status code of the page')]
 
 
 @router.get('', summary='Get any page from the given URL', response_model=AnyPage)
@@ -70,7 +71,7 @@ async def get_any_page(
     async with semaphore:
         async with new_context(browser, browser_params, proxy_params) as context:
             page = await context.new_page()
-            await page_processing(
+            status = await page_processing(
                 page=page,
                 url=url.url,
                 params=common_params,
@@ -90,6 +91,7 @@ async def get_any_page(
         'query': query_dict,
         'title': title,
         'meta': htmlutil.social_meta_tags(page_content),
+        'status_code': status,
     }
 
     if common_params.full_content:
