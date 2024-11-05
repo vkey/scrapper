@@ -7,7 +7,7 @@ import tldextract
 from fastapi import APIRouter, Query, Depends
 from fastapi.requests import Request
 from pydantic import BaseModel
-from playwright.async_api import Browser, Route
+from playwright.async_api import Browser
 
 from internal import cache
 from internal.browser import (
@@ -23,7 +23,9 @@ from .query_params import (
     ProxyQueryParams,
 )
 
+
 router = APIRouter(prefix='/api/page', tags=['page'])
+
 
 class AnyPage(BaseModel):
     id: Annotated[str, Query(description='unique result ID')]
@@ -38,24 +40,25 @@ class AnyPage(BaseModel):
     title: Annotated[str | None, Query(description="page's title")] = None
     status_code: Annotated[int, Query(description='HTTP status code of the page')]
 
+
 @router.get('', summary='Get any page from the given URL', response_model=AnyPage)
 async def get_any_page(
     request: Request,
     url: Annotated[URLParam, Depends()],
     common_params: Annotated[CommonQueryParams, Depends()],
     browser_params: Annotated[BrowserQueryParams, Depends()],
-    proxy_params: Annotated[ProxyQueryParams, Depends()]
+    proxy_params: Annotated[ProxyQueryParams, Depends()],
 ) -> dict:
     """
     Get any page from the given URL.<br><br>
     Page is fetched using Playwright, but no additional processing is done.
     """
     # pylint: disable=duplicate-code
-    # Split URL into parts: host with scheme, path with query, query params as a dict
+    # split URL into parts: host with scheme, path with query, query params as a dict
     host_url, full_path, query_dict = split_url(request.url)
 
-    # Get cache data if exists
-    r_id = cache.make_key(full_path)  # Unique result ID
+    # get cache data if exists
+    r_id = cache.make_key(full_path)  # unique result ID
     if common_params.cache:
         data = cache.load_result(key=r_id)
         if data:
@@ -64,19 +67,9 @@ async def get_any_page(
     browser: Browser = request.state.browser
     semaphore: asyncio.Semaphore = request.state.semaphore
 
-    # Create a new browser context
+    # create a new browser context
     async with semaphore:
         async with new_context(browser, browser_params, proxy_params) as context:
-            async def block_unwanted_resources(route: Route):
-                if route.request.resource_type in (browser_params.block_types or []):
-                    await route.abort()
-                elif route.request.url.lower().endswith(tuple(browser_params.block_extensions or [])):
-                    await route.abort()
-                else:
-                    await route.continue_()
-
-            await context.route("**/*", block_unwanted_resources)
-
             page = await context.new_page()
             status = await page_processing(
                 page=page,
@@ -106,7 +99,7 @@ async def get_any_page(
     if common_params.screenshot:
         r['screenshotUri'] = f'{host_url}/screenshot/{r_id}'
 
-    # Save result to disk
+    # save result to disk
     if common_params.cache:
         cache.dump_result(r, key=r_id, screenshot=screenshot)
     return r

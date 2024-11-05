@@ -201,28 +201,6 @@ class BrowserQueryParams:
                 )
             ),
         ] = WaitUntilEnum.DOMCONTENTLOADED,
-        block_types: Annotated[
-            str | None,
-            Query(
-                alias='block-types',
-                description=(
-                    'List of resource types to block on the page.<br>'
-                    'Examples: `image`, `media`, `font`, etc.<br>'
-                    'By default, all resources are allowed.'
-                ),
-            ),
-        ] = None,
-        block_extensions: Annotated[
-            str | None,
-            Query(
-                alias='block-extensions',
-                description=(
-                    'List of file extensions to block on the page.<br>'
-                    'Examples: `.pdf`, `.jpg`, `.zip`, etc.<br>'
-                    'By default, no extensions are blocked.'
-                ),
-            ),
-        ] = None,
         sleep: Annotated[
             int,
             Query(
@@ -382,23 +360,11 @@ class BrowserQueryParams:
         self.timezone = timezone
         self.http_credentials = None
         self.extra_http_headers = None
-        self.block_types = block_types
-        self.block_extensions = block_extensions
 
         if resource:
             resource = list(filter(None, map(str.strip, resource.split(','))))
             if resource:
                 self.resource = resource
-
-        if block_extensions:
-            block_extensions = list(filter(None, map(str.strip, block_extensions.split(','))))
-            if block_extensions:
-                self.block_extensions = block_extensions
-
-        if block_types:
-            block_types = list(filter(None, map(str.strip, block_types.split(','))))
-            if block_types:
-                self.block_types = block_types
 
         if device not in DEVICE_REGISTRY:
             raise QueryParsingError('device', 'Device not found', device)
