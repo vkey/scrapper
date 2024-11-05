@@ -100,5 +100,6 @@ async def get_any_page(
         r['screenshotUri'] = f'{host_url}/screenshot/{r_id}'
 
     # save result to disk
-    cache.dump_result(r, key=r_id, screenshot=screenshot)
+    if common_params.cache:
+        cache.dump_result(r, key=r_id, screenshot=screenshot)
     return r
