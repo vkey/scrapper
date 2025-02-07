@@ -30,8 +30,8 @@ class URLParam:
             )
         ],
     ):
-        if validators.url(url) is not True:
-            raise QueryParsingError('url', 'Invalid URL', url)
+        # if validators.url(url) is not True:
+        #     raise QueryParsingError('url', 'Invalid URL', url)
         self.url = url
 
 
