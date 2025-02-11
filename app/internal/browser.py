@@ -2,7 +2,8 @@ import contextlib
 import copy
 from collections.abc import Sequence
 
-from playwright.async_api import Browser, BrowserContext, Page, Route
+from camoufox.async_api import AsyncCamoufox as Browser
+from playwright.async_api import BrowserContext, Page, Route
 from playwright.async_api import Error as PlaywrightError
 from routers.query_params import CommonQueryParams, BrowserQueryParams, ProxyQueryParams
 

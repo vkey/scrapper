@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query
 from fastapi.requests import Request
 from pydantic import BaseModel
-from playwright.async_api import Browser
+from camoufox.async_api import AsyncCamoufox as Browser
 
 from version import revision
 

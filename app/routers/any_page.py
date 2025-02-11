@@ -7,7 +7,7 @@ import tldextract
 from fastapi import APIRouter, Query, Depends
 from fastapi.requests import Request
 from pydantic import BaseModel
-from playwright.async_api import Browser
+from camoufox.async_api import AsyncCamoufox as Browser
 
 from internal import cache
 from internal.browser import (
@@ -64,23 +64,27 @@ async def get_any_page(
         if data:
             return data
 
-    browser: Browser = request.state.browser
     semaphore: asyncio.Semaphore = request.state.semaphore
 
-    # create a new browser context
-    async with semaphore:
-        async with new_context(browser, browser_params, proxy_params) as context:
-            page = await context.new_page()
-            status = await page_processing(
-                page=page,
-                url=url.url,
-                params=common_params,
-                browser_params=browser_params,
-            )
-            page_content = await page.content()
-            screenshot = await get_screenshot(page) if common_params.screenshot else None
-            page_url = page.url
-            title = await page.title()
+    async with Browser(
+        humanize=True,
+        geoip=True,
+        headless=True,
+                       ) as browser:
+        # create a new browser context
+        async with semaphore:
+            async with new_context(browser, browser_params, proxy_params) as context:
+                page = await context.new_page()
+                status = await page_processing(
+                    page=page,
+                    url=url.url,
+                    params=common_params,
+                    browser_params=browser_params
+                )
+                page_content = await page.content()
+                screenshot = await get_screenshot(page) if common_params.screenshot else None
+                page_url = page.url
+                title = await page.title()
 
     r = {
         'id': r_id,
