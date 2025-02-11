@@ -68,8 +68,7 @@ async def get_any_page(
 
     async with Browser(
         humanize=True,
-        geoip=True,
-        headless=True,
+        geoip=True
                        ) as browser:
         # create a new browser context
         async with semaphore:
