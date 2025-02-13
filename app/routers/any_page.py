@@ -22,7 +22,7 @@ from .query_params import (
     BrowserQueryParams,
     ProxyQueryParams,
 )
-
+from app.internal.solvers.cloudflare import CloudflareSolver
 
 router = APIRouter(prefix='/api/page', tags=['page'])
 
@@ -64,27 +64,32 @@ async def get_any_page(
         if data:
             return data
 
+    browser: Browser = request.state.browser
     semaphore: asyncio.Semaphore = request.state.semaphore
 
-    async with Browser(
-        humanize=True,
-        geoip=True,
-        headless=True,
-                       ) as browser:
-        # create a new browser context
-        async with semaphore:
-            async with new_context(browser, browser_params, proxy_params) as context:
-                page = await context.new_page()
-                status = await page_processing(
-                    page=page,
-                    url=url.url,
-                    params=common_params,
-                    browser_params=browser_params
-                )
-                page_content = await page.content()
-                screenshot = await get_screenshot(page) if common_params.screenshot else None
-                page_url = page.url
-                title = await page.title()
+    async with semaphore:
+        async with new_context(browser, browser_params, proxy_params) as context:
+            page = await context.new_page()
+            status = await page_processing(
+                page=page,
+                url=url.url,
+                params=common_params,
+                browser_params=browser_params
+            )
+            if await CloudflareSolver.is_blocked(page) == False & await CloudflareSolver.is_challenge(page):
+                async def wait_for_challenge():
+                    while await CloudflareSolver.is_challenge(page):
+                        # await CloudflareSolver.solve_challenge(page)
+                        await asyncio.sleep(1)
+
+                try:
+                    await asyncio.wait_for(wait_for_challenge(), timeout=30)
+                except asyncio.TimeoutError:
+                    pass
+            page_content = await page.content()
+            screenshot = await get_screenshot(page) if common_params.screenshot else None
+            page_url = page.url
+            title = await page.title()
 
     r = {
         'id': r_id,

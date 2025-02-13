@@ -1,0 +1,17 @@
+{
+    "manifest_version": 3,
+    "name": "Shadow DOM Opener",
+    "version": "3.1",
+    "description": "Open Shadow DOM",
+    "permissions": ["scripting", "webNavigation"],
+    "web_accessible_resources": [{
+        "resources": ["inject.js"],
+        "matches": ["<all_urls>"],
+        "use_dynamic_url": true
+    }],
+    "content_scripts": [{
+        "matches": ["<all_urls>"],
+        "js": ["content.js"],
+        "run_at": "document_start"
+    }]
+}

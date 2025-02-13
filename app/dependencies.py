@@ -4,7 +4,7 @@ import os
 from typing import TypedDict
 
 from fastapi import FastAPI
-from playwright.async_api import async_playwright, Browser
+from camoufox.async_api import AsyncCamoufox as Browser
 
 from settings import USER_SCRIPTS_DIR, BROWSER_CONTEXT_LIMIT
 
@@ -19,8 +19,9 @@ class State(TypedDict):
 async def lifespan(_: FastAPI):
     os.makedirs(USER_SCRIPTS_DIR, exist_ok=True)
     semaphore = asyncio.Semaphore(BROWSER_CONTEXT_LIMIT)
-
-    async with async_playwright() as playwright:
-        firefox = playwright.firefox
-        browser = await firefox.launch(headless=True)
+    async with Browser(
+        humanize=True,
+        geoip=True,
+        headless="virtual"
+    ) as browser:
         yield State(browser=browser, semaphore=semaphore)
