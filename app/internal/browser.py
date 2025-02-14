@@ -1,5 +1,7 @@
 import contextlib
 import copy
+import asyncio
+import itertools
 from collections.abc import Sequence
 
 from camoufox.async_api import AsyncCamoufox as Browser
@@ -115,7 +117,8 @@ async def page_processing(
 
     # navigate to the given url
     # noinspection PyTypeChecker
-    response = await page.goto(url, timeout=browser_params.timeout, wait_until=browser_params.wait_until)
+    response = await page.goto(url, timeout=browser_params.timeout)
+    await wait_for_states(page, browser_params.wait_until, browser_params.timeout)
 
     # wait for the given timeout in milliseconds and scroll down the page
     n = 10
@@ -173,3 +176,13 @@ async def get_screenshot(page: Page):
         if 'Cannot take screenshot larger than ' in exc.message:
             return await page.screenshot(full_page=False, **kwargs)
         raise exc  # pragma: no cover
+
+NETWORK_STATES = ["networkidle", "load", "domcontentloaded",]
+
+async def wait_for_states(page: Page, from_state: str, timeout: int = 3000):
+    start_index = NETWORK_STATES.index(from_state)
+    for state in itertools.islice(NETWORK_STATES, start_index, None):
+        try:
+            await asyncio.wait_for(page.wait_for_load_state(state=state, timeout=timeout), timeout=timeout + 100)
+        except asyncio.TimeoutError:
+            pass
